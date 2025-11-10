@@ -1,0 +1,39 @@
+/* Container width tweaks */
+.main .block-container { padding-top: 1.2rem; padding-bottom: 3rem; }
+
+/* Header gradient title */
+h1.app-title {
+  font-weight: 800;
+  letter-spacing: .3px;
+  background: linear-gradient(90deg,#a78bfa 0%, #22d3ee 50%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: .25rem;
+}
+p.app-subtitle { color: #9ca3af; margin-top: 0; }
+
+/* Card look */
+.card {
+  background: #151a28;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+/* Quick chips */
+.stChipsRow button {
+  border-radius: 999px !important;
+  padding: 6px 14px !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/* Footer */
+.footer {
+  color: #9ca3af;
+  font-size: 13px;
+  border-top: 1px dashed rgba(255,255,255,0.12);
+  padding-top: 10px;
+  margin-top: 24px;
+  text-align: center;
+}
