@@ -1,0 +1,9 @@
+[
+  {
+    "timestamp": "2025-11-08 09:16 UTC",
+    "question": "Orders per month in 2018.\n",
+    "summary": "**Question:** Orders per month in 2018.\n\n- Top numeric column (by head sum): **orders_count** = 54,023.00\n- Top **month**: **2018-03-01 00:00:00+05:30** with orders_count = 7,252.00\n- Time column detected: **month** (showing 10 recent/first rows).\n- Sample rows:\n  - month=2018-01-01 00:00:00+05:30, orders_count=7203\n  - month=2018-02-01 00:00:00+05:30, orders_count=6713\n  - month=2018-03-01 00:00:00+05:30, orders_count=7252",
+    "sql": "SELECT date_trunc('month', o.order_purchase_timestamp) AS month,\n       COUNT(o.order_id) AS orders_count\nFROM orders o\nWHERE EXTRACT(YEAR FROM o.order_purchase_timestamp) = 2018\nGROUP BY 1\nORDER BY 1;",
+    "sample_rows": 10
+  }
+]
