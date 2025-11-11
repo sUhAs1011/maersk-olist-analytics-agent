@@ -48,3 +48,48 @@ Renders tables, charts, KPIs, it is basically the streamlit interface `app/main.
 ```shell
    streamlit run app/main.py
    ```
+
+```shell
+                ┌────────────────────────────┐
+                │        User / Analyst      │
+                └───────────────┬────────────┘
+                                │ NL Query
+                                ▼
+                   ┌─────────────────────────┐
+                   │    Orchestrator Agent   │
+                   │ (Intent Classifier LLM) │
+                   └───────┬───────┬────────┘
+                           │       │
+         ┌─────────────────┘       └───────────────────┐
+         ▼                                             ▼
+┌────────────────────┐                     ┌────────────────────┐
+│  SQL Agent (LLM)   │                     │  Explanation/QA    │
+│ NL → SQL + Safety  │                     │  Non-SQL responses │
+└───────┬────────────┘                     └────────────────────┘
+        │ SQL
+        ▼
+┌──────────────────────────┐
+│ DuckDB Execution Engine  │
+│  Safe SQL run + fetch    │
+└───────┬──────────────────┘
+        │ Results
+        ▼
+┌──────────────────────────┐
+│ Insight Generator (LLM)  │
+│ Convert result → text    │
+└───────┬──────────────────┘
+        │ Summary
+        ▼
+┌──────────────────────────┐
+│ Memory Store (JSON DB)  │
+└───────┬────┬────────────┘
+        │    │ Saved Insights
+        │    ▼
+        │  Report Builder (PDF/MD)
+        │
+        ▼
+┌──────────────────────────┐
+│ Streamlit UI + Dashboard │
+└──────────────────────────┘
+
+```
