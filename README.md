@@ -1,6 +1,6 @@
 # maersk-olist-analytics-agent
 
-The project is divided in 5 phases:
+## The project is divided in 5 phases:
 
 ### Phase 1 — Data Ingestion & Warehouse Setup
 The main deliverables of this phase is I loaded the Olist data which I cleaned and validated and pushed it into the DuckDB, after that we joined key tables (orders, customers, items, reviews, payments) and we created a olist.duckdb local warehouse. Finally we also extracted schema metadata and pushed it into docs/schema.json
@@ -17,7 +17,7 @@ Added “save insight” functionality with automated result summarization, allo
 ### Phase 5 — Unified Assistant + KPI Dashboard
 Integrated the conversational SQL agent with a KPI dashboard, providing both natural language analytics and visual business intelligence in one streamlined interface.
 
-The project comprises of 8 different agents, which are:
+## The project comprises of 8 different agents, which are:
 
 ### 1.Intent Classification / Orchestrator Agent:
 It Understands user query and routes it (SQL vs explanation vs translation) and it resides in `core/orchestrator.py`
