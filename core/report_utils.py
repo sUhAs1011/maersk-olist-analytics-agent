@@ -7,6 +7,7 @@ from markdown import markdown as md_to_html
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
+import matplotlib.pyplot as plt  # NEW
 
 # ---------- heuristics to turn a result DF into a paragraph ----------
 def summarize_df(df: pd.DataFrame, question: str) -> str:
@@ -65,17 +66,82 @@ def insights_to_markdown(insights: list[dict], title="Olist InsightGPT — Analy
         lines.append("")
     return "\n".join(lines)
 
-# ---------- simple Markdown → PDF (text only, no images) ----------
-def markdown_to_pdf_bytes(markdown_text: str) -> bytes:
-    # Convert MD to plain-ish text (strip HTML tags by keeping text content)
-    # We'll do a lightweight approach: drop tags, keep lines
-    # For nicer typography, you could render HTML → PDF via WeasyPrint (not used here).
+# ---------- create a simple chart (PNG bytes) from DF ----------
+def df_to_chart_png(df: pd.DataFrame, title: str = "Result Chart") -> bytes | None:
+    """Create a simple bar/line chart from the first 10 rows of df.
+       Returns PNG bytes or None if not plottable.
+       Uses matplotlib only (no seaborn)."""
+    if df is None or df.empty:
+        return None
+    tmp = df.head(10).copy()
+    cols = list(tmp.columns)
+
+    # choose x (first non-numeric) and y (first numeric)
+    x_col, y_col = None, None
+    for c in cols:
+        if not pd.api.types.is_numeric_dtype(tmp[c]):
+            x_col = c
+            break
+    for c in cols:
+        if pd.api.types.is_numeric_dtype(tmp[c]):
+            y_col = c
+            break
+
+    # if no numeric columns → cannot plot
+    if y_col is None:
+        return None
+
+    fig, ax = plt.subplots(figsize=(7, 3.5))
+    try:
+        if x_col is None:
+            # line by index
+            ax.plot(range(len(tmp)), tmp[y_col], marker="o")
+            ax.set_xlabel("Index")
+        else:
+            x_vals = tmp[x_col].astype(str)
+            if x_vals.nunique() <= 10:
+                ax.bar(x_vals, tmp[y_col])
+                ax.set_xticklabels(x_vals, rotation=30, ha="right")
+            else:
+                ax.plot(x_vals, tmp[y_col], marker="o")
+                for label in ax.get_xticklabels():
+                    label.set_rotation(30)
+                    label.set_horizontalalignment("right")
+            ax.set_xlabel(x_col)
+        ax.set_ylabel(y_col)
+        ax.set_title(title)
+        buf = io.BytesIO()
+        fig.tight_layout()
+        fig.savefig(buf, format="png", dpi=160, bbox_inches="tight")
+        buf.seek(0)
+        return buf.read()
+    finally:
+        plt.close(fig)
+
+# ---------- Markdown → PDF (optionally embed an image at top) ----------
+def markdown_to_pdf_bytes(markdown_text: str, image_bytes: bytes | None = None) -> bytes:
     plain = _md_to_plain(markdown_text)
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     width, height = A4
     x, y = 2*cm, height - 2*cm
     max_width_chars = 95
+
+    # optional image at top
+    if image_bytes:
+        try:
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(io.BytesIO(image_bytes))
+            img_w, img_h = img.getSize()
+            max_w = width - 4*cm
+            scale = max_w / img_w
+            draw_w, draw_h = img_w * scale, img_h * scale
+            if y - draw_h < 3*cm:
+                c.showPage(); y = height - 2*cm
+            c.drawImage(img, x, y - draw_h, width=draw_w, height=draw_h)
+            y -= (draw_h + 16)
+        except Exception:
+            pass  # continue without image if something goes wrong
 
     for line in plain.splitlines():
         for wrapped in _wrap(line, max_width_chars).splitlines():
@@ -99,3 +165,4 @@ def _md_to_plain(markdown_text: str) -> str:
         line = line.lstrip("# ").strip()
         lines.append(line)
     return "\n".join(lines)
+
