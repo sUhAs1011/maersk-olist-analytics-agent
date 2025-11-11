@@ -42,3 +42,9 @@ It Generates Markdown & PDF reports and it resides in `core/report_utils.*`
 
 ### 8.Visualization Agent
 Renders tables, charts, KPIs, it is basically the streamlit interface `app/main.py`
+
+### Commands to run the streamlit code
+
+```shell
+   streamlit run app/main.py
+   ```
