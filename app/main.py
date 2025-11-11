@@ -14,7 +14,12 @@ import duckdb
 from core.sql_agent import DEFAULT_DB, DEFAULT_SCHEMA
 from core.orchestrator import handle_message
 from core.memory import add_insight, load_insights, clear_insights
-from core.report_utils import summarize_df, insights_to_markdown, markdown_to_pdf_bytes
+from core.report_utils import (
+    summarize_df,
+    insights_to_markdown,
+    markdown_to_pdf_bytes,
+    df_to_chart_png,  # NEW: chart helper
+)
 
 # Theme
 pio.templates.default = "plotly_dark"
@@ -54,6 +59,14 @@ with tab1:
         # -------- Report section --------
         st.markdown("---")
         st.subheader("Report")
+
+        # NEW: overwrite toggle
+        fresh_mode = st.checkbox(
+            "Fresh report per query (overwrite)",
+            value=False,
+            help="When ON: clears previous insights before saving a new one."
+        )
+
         report_title = st.text_input("Report title", "Olist InsightGPT — Analysis Report")
         report_author = st.text_input("Author", "Auto-Analyst")
 
@@ -79,6 +92,7 @@ with tab1:
                 use_container_width=True,
             )
 
+            # Cumulative report PDF (text-only or could be extended later)
             pdf_bytes = markdown_to_pdf_bytes(md_text)
             st.download_button(
                 "Download PDF", pdf_bytes,
@@ -100,7 +114,8 @@ with tab1:
 
     # ---------- Chat history ----------
     for user, md, extras in st.session_state["history"]:
-        with st.chat_message("user"): st.write(user)
+        with st.chat_message("user"):
+            st.write(user)
         with st.chat_message("assistant"):
             with st.container(border=True):
                 st.markdown(md)
@@ -130,22 +145,63 @@ with tab1:
                         if show_sql and sql:
                             st.code(sql, language="sql")
 
-                    try: summary = summarize_df(df, user)
-                    except: summary = f"**Question:** {user} — summary generated."
+                    # -------- Summarize current result --------
+                    try:
+                        summary = summarize_df(df, user)
+                    except Exception:
+                        summary = f"**Question:** {user} — summary generated."
 
+                    # -------- Save insight to global report (with overwrite toggle) --------
                     c1, c2 = st.columns([1, 5])
                     with c1:
                         key_seed = (user + (sql or ""))[:500]
                         btn_key = "save_" + hashlib.md5(key_seed.encode()).hexdigest()
                         if st.button("💾 Save insight", key=btn_key):
+                            if fresh_mode:
+                                clear_insights()
                             add_insight(
-                                question=user, summary=summary, sql=sql,
+                                question=user,
+                                summary=summary,
+                                sql=sql,
                                 sample_rows=(0 if df is None else min(len(df), 10)),
                             )
                             st.success("Insight saved.")
                     with c2:
                         with st.popover("🔎 Preview summary"):
                             st.markdown(summary)
+
+                    # -------- Single-query export (fresh PDF/MD) with chart --------
+                    single_md = insights_to_markdown(
+                        [{
+                            "timestamp": "",
+                            "question": user,
+                            "summary": summary,
+                            "sql": sql,
+                            "sample_rows": (0 if df is None else min(len(df), 10))
+                        }],
+                        title="Olist Insight — Single Query Report",
+                        author="Auto-Analyst"
+                    )
+
+                    # Try to render a chart image from this df
+                    chart_bytes = df_to_chart_png(df, title=f"Result: {user}") if df is not None else None
+                    single_pdf = markdown_to_pdf_bytes(single_md, image_bytes=chart_bytes)
+
+                    c3, c4 = st.columns([1, 3])
+                    with c3:
+                        st.download_button(
+                            "📄 Export PDF (this query)",
+                            single_pdf,
+                            file_name="report_single_query.pdf",
+                            mime="application/pdf"
+                        )
+                    with c4:
+                        st.download_button(
+                            "📝 Export Markdown (this query)",
+                            single_md.encode("utf-8"),
+                            file_name="report_single_query.md",
+                            mime="text/markdown"
+                        )
 
 # =====================================================================================
 # ✅ TAB 2: KPI DASHBOARD
@@ -159,8 +215,10 @@ with tab2:
     @st.cache_data(show_spinner=False)
     def execq(sql):
         con = duckdb.connect(str(DEFAULT_DB))
-        try: return con.execute(sql).fetchdf()
-        finally: con.close()
+        try:
+            return con.execute(sql).fetchdf()
+        finally:
+            con.close()
 
     year = st.selectbox("Year", [2016, 2017, 2018], index=2)
     state = st.text_input("Filter by State (optional)")
@@ -202,3 +260,4 @@ st.markdown("""
   Built for A.P. Moller Maersk Assignment • DuckDB · Gemini · Streamlit • © 2025
 </div>
 """, unsafe_allow_html=True)
+
